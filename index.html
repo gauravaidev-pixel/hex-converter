@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="description" content="Decimal to hexadecimal and hexadecimal to decimal converter. Supports big numbers, keeps a short history and works offline.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HexConv">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png" sizes="192x192" type="image/png">
+<title>Hex Converter — Decimal ↔ Hexadecimal</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-1: #1a1a2e;
+    --bg-2: #16213e;
+    --accent: #e94560;
+    --accent-soft: rgba(233, 69, 96, 0.18);
+    --teal: #4ecdc4;
+    --text: #eee;
+    --muted: #aaa;
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: var(--text);
+  }
+
+  .container {
+    background: rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 30px;
+    padding: 30px 25px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  h1 {
+    text-align: center;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-size: 1.7rem;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 26px;
+    font-size: 0.9rem;
+  }
+
+  .input-group { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  input[type="text"], select {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-size: 1.1rem;
+    outline: none;
+    transition: background 0.25s, box-shadow 0.25s;
+    font-family: inherit;
+  }
+
+  input[type="text"] {
+    font-family: 'SFMono-Regular', Consolas, 'DejaVu Sans Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  input[type="text"]:focus {
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  input[type="text"].invalid { box-shadow: 0 0 0 2px #ff6b6b; }
+
+  input::placeholder { color: #6b6b85; }
+
+  select { cursor: pointer; }
+  select option { background: var(--bg-1); color: #fff; }
+
+  .hint {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: #8888a0;
+    min-height: 1em;
+  }
+
+  .row { display: flex; gap: 10px; }
+
+  button {
+    width: 100%;
+    padding: 15px;
+    background: var(--accent);
+    border: none;
+    border-radius: 15px;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:hover { background: #ff6b6b; transform: translateY(-1px); }
+  button:active { transform: scale(0.99); }
+
+  button.ghost {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 11px;
+  }
+
+  button.ghost:hover { background: rgba(255, 255, 255, 0.18); }
+
+  .result {
+    margin-top: 22px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    text-align: center;
+    display: none;
+  }
+
+  .result.show { display: block; }
+
+  .result-label {
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .result-value {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--teal);
+    word-break: break-all;
+    font-family: 'SFMono-Regular', Consolas, 'DejaVu Sans Mono', monospace;
+    margin: 10px 0 14px;
+    line-height: 1.35;
+  }
+
+  .result-actions { display: flex; gap: 10px; }
+  .result-actions button { font-size: 0.85rem; padding: 11px; font-weight: 600; }
+
+  .error {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(233, 69, 96, 0.15);
+    border: 1px solid rgba(233, 69, 96, 0.4);
+    color: #ffb3c0;
+    font-size: 0.85rem;
+    display: none;
+  }
+
+  .error.show { display: block; }
+
+  .history {
+    margin-top: 26px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .history h2 {
+    color: var(--text);
+    margin-bottom: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .history-list {
+    list-style: none;
+    max-height: 220px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .history-list li {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 11px 12px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    font-family: 'SFMono-Regular', Consolas, 'DejaVu Sans Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--teal);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    word-break: break-all;
+  }
+
+  .history-list li:hover { background: rgba(0, 0, 0, 0.32); }
+  .history-list li.empty { color: #666; justify-content: center; cursor: default; }
+  .history-list li .in { color: #9a9ab0; }
+  .history-list li strong { font-weight: 700; }
+
+  footer {
+    text-align: center;
+    margin-top: 24px;
+    color: #666680;
+    font-size: 0.7rem;
+    line-height: 1.6;
+  }
+
+  .install-btn { display: none; margin-top: 14px; }
+  .install-btn.show { display: block; }
+
+  @media (max-width: 480px) {
+    .container { padding: 22px 18px; border-radius: 24px; }
+    h1 { font-size: 1.35rem; }
+    .result-value { font-size: 1.2rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="container">
+  <h1>Hex Converter</h1>
+  <p class="subtitle">Decimal ↔ Hexadecimal · works offline</p>
+
+  <div class="input-group">
+    <label for="numberInput" id="inputLabel">Enter decimal number</label>
+    <input type="text" id="numberInput" placeholder="e.g. 255" autocomplete="off"
+           autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text">
+    <div class="hint" id="inputHint">Digits 0–9. Negative numbers and big values are fine.</div>
+  </div>
+
+  <div class="input-group">
+    <label for="conversionType">Conversion type</label>
+    <select id="conversionType">
+      <option value="decToHex">Decimal → Hexadecimal</option>
+      <option value="hexToDec">Hexadecimal → Decimal</option>
+    </select>
+  </div>
+
+  <button type="button" id="convertBtn">Convert</button>
+
+  <div class="error" id="errorBox" role="alert"></div>
+
+  <div class="result" id="resultBox" aria-live="polite">
+    <div class="result-label" id="resultLabel">Hexadecimal value</div>
+    <div class="result-value" id="resultValue">0x0</div>
+    <div class="result-actions">
+      <button type="button" class="ghost" id="copyBtn">Copy</button>
+      <button type="button" class="ghost" id="useBtn">Use as input</button>
+    </div>
+  </div>
+
+  <button type="button" class="ghost install-btn" id="installBtn">Install app</button>
+
+  <section class="history">
+    <h2>Conversion history</h2>
+    <ul class="history-list" id="historyList">
+      <li class="empty">No conversions yet</li>
+    </ul>
+    <button type="button" class="ghost" id="clearBtn" style="margin-top:10px">Clear history</button>
+  </section>
+
+  <footer>
+    Runs fully in your browser · nothing is uploaded<br>
+    Install on home screen for offline use
+  </footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'hexHistory';
+  var MAX_HISTORY = 10;
+
+  var input        = document.getElementById('numberInput');
+  var typeSelect   = document.getElementById('conversionType');
+  var convertBtn   = document.getElementById('convertBtn');
+  var inputLabel   = document.getElementById('inputLabel');
+  var inputHint    = document.getElementById('inputHint');
+  var resultBox    = document.getElementById('resultBox');
+  var resultLabel  = document.getElementById('resultLabel');
+  var resultValue  = document.getElementById('resultValue');
+  var errorBox     = document.getElementById('errorBox');
+  var copyBtn      = document.getElementById('copyBtn');
+  var useBtn       = document.getElementById('useBtn');
+  var historyList  = document.getElementById('historyList');
+  var clearBtn     = document.getElementById('clearBtn');
+  var installBtn   = document.getElementById('installBtn');
+
+  var history = [];
+  var lastResult = '';
+
+  var COPY = {
+    decToHex: {
+      label: 'Enter decimal number',
+      placeholder: 'e.g. 255',
+      hint: 'Digits 0–9. Negative numbers and big values are fine.',
+      result: 'Hexadecimal value'
+    },
+    hexToDec: {
+      label: 'Enter hexadecimal number',
+      placeholder: 'e.g. FF or 0xFF',
+      hint: 'Digits 0–9 and A–F. The 0x prefix is optional.',
+      result: 'Decimal value'
+    }
+  };
+
+  /* ---------- helpers ---------- */
+
+  function clean(raw) {
+    // tolerate spaces, underscores, commas and a leading 0x / 0X
+    return raw.replace(/[\s_,]/g, '');
+  }
+
+  function decToHex(raw) {
+    var s = clean(raw);
+    var negative = false;
+    if (s.charAt(0) === '-') { negative = true; s = s.slice(1); }
+    else if (s.charAt(0) === '+') { s = s.slice(1); }
+    if (!/^[0-9]+$/.test(s)) {
+      throw new Error('That is not a decimal number. Use digits 0–9 only.');
+    }
+    var n = BigInt(s);
+    if (negative) n = -n;
+    var digits = (n < 0n ? (-n) : n).toString(16).toUpperCase();
+    return (n < 0n ? '-0x' : '0x') + digits;
+  }
+
+  function hexToDec(raw) {
+    var s = clean(raw);
+    var negative = false;
+    if (s.charAt(0) === '-') { negative = true; s = s.slice(1); }
+    else if (s.charAt(0) === '+') { s = s.slice(1); }
+    if (/^0[xX]/.test(s)) s = s.slice(2);
+    if (!/^[0-9a-fA-F]+$/.test(s)) {
+      throw new Error('That is not a hexadecimal number. Use 0–9 and A–F only.');
+    }
+    var n = BigInt('0x' + s);
+    if (negative) n = -n;
+    return n.toString(10);
+  }
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.add('show');
+    input.classList.add('invalid');
+    resultBox.classList.remove('show');
+  }
+
+  function clearError() {
+    errorBox.classList.remove('show');
+    errorBox.textContent = '';
+    input.classList.remove('invalid');
+  }
+
+  /* ---------- history ---------- */
+
+  function loadHistory() {
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      var parsed = saved ? JSON.parse(saved) : [];
+      history = Array.isArray(parsed) ? parsed.filter(function (h) {
+        return h && typeof h.input === 'string' && typeof h.output === 'string';
+      }) : [];
+    } catch (e) {
+      history = [];
+    }
+    renderHistory();
+  }
+
+  function saveHistory() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+    } catch (e) { /* private mode / quota — ignore */ }
+  }
+
+  function renderHistory() {
+    if (!history.length) {
+      historyList.innerHTML = '<li class="empty">No conversions yet</li>';
+      return;
+    }
+    historyList.innerHTML = '';
+    history.forEach(function (item, i) {
+      var li = document.createElement('li');
+      li.title = 'Tap to use this input again';
+      li.setAttribute('data-index', String(i));
+
+      var left = document.createElement('span');
+      left.className = 'in';
+      left.textContent = item.input;
+
+      var arrow = document.createTextNode(' → ');
+
+      var right = document.createElement('strong');
+      right.textContent = item.output;
+
+      li.appendChild(left);
+      li.appendChild(arrow);
+      li.appendChild(right);
+      historyList.appendChild(li);
+    });
+  }
+
+  function addToHistory(inputValue, outputValue, mode) {
+    if (history.length && history[0].input === inputValue && history[0].output === outputValue) return;
+    history.unshift({
+      input: inputValue,
+      output: outputValue,
+      type: mode,
+      time: new Date().toISOString()
+    });
+    if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+    saveHistory();
+    renderHistory();
+  }
+
+  /* ---------- conversion ---------- */
+
+  function applyModeCopy() {
+    var c = COPY[typeSelect.value];
+    inputLabel.textContent = c.label;
+    input.placeholder = c.placeholder;
+    inputHint.textContent = c.hint;
+    resultLabel.textContent = c.result;
+    input.setAttribute('inputmode', typeSelect.value === 'decToHex' ? 'numeric' : 'text');
+  }
+
+  function convert(record) {
+    var raw = input.value.trim();
+    if (!raw) {
+      clearError();
+      resultBox.classList.remove('show');
+      return;
+    }
+
+    var mode = typeSelect.value;
+    var out;
+    try {
+      out = mode === 'decToHex' ? decToHex(raw) : hexToDec(raw);
+    } catch (err) {
+      showError(err.message);
+      return;
+    }
+
+    clearError();
+    resultValue.textContent = out;
+    resultBox.classList.add('show');
+    lastResult = out;
+    if (record) addToHistory(clean(raw), out, mode);
+  }
+
+  /* ---------- events ---------- */
+
+  input.addEventListener('input', function () {
+    convert(false);
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      convert(true);
+    }
+  });
+
+  typeSelect.addEventListener('change', function () {
+    applyModeCopy();
+    clearError();
+    convert(false);
+  });
+
+  convertBtn.addEventListener('click', function () {
+    convert(true);
+    if (!input.value.trim()) input.focus();
+  });
+
+  copyBtn.addEventListener('click', function () {
+    if (!lastResult) return;
+    var text = lastResult;
+    function done() {
+      copyBtn.textContent = 'Copied';
+      setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1200);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else {
+      fallback();
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ }
+      document.body.removeChild(ta);
+    }
+  });
+
+  useBtn.addEventListener('click', function () {
+    if (!lastResult) return;
+    input.value = lastResult;
+    convert(false);
+    input.focus();
+  });
+
+  historyList.addEventListener('click', function (e) {
+    var li = e.target.closest('li');
+    if (!li || li.classList.contains('empty')) return;
+    var item = history[Number(li.getAttribute('data-index'))];
+    if (!item) return;
+    typeSelect.value = item.type === 'hexToDec' ? 'hexToDec' : 'decToHex';
+    applyModeCopy();
+    input.value = item.input;
+    convert(false);
+  });
+
+  clearBtn.addEventListener('click', function () {
+    history = [];
+    saveHistory();
+    renderHistory();
+  });
+
+  /* ---------- install prompt ---------- */
+
+  var deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.classList.add('show');
+  });
+
+  installBtn.addEventListener('click', function () {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function () {
+      deferredPrompt = null;
+      installBtn.classList.remove('show');
+    });
+  });
+
+  window.addEventListener('appinstalled', function () {
+    installBtn.classList.remove('show');
+  });
+
+  /* ---------- service worker ---------- */
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function (err) {
+        console.warn('Service worker not registered:', err);
+      });
+    });
+  }
+
+  /* ---------- boot ---------- */
+
+  applyModeCopy();
+  loadHistory();
+})();
+</script>
+</body>
+</html>
