@@ -1,0 +1,8 @@
+# Render Blueprint — static site, no build step needed.
+# Repo → New + → Blueprint → pick this repo, or create a Static Site
+# manually and just leave the build command empty.
+services:
+  - type: web
+    name: hex-converter
+    runtime: static
+    staticPublishPath: ./
